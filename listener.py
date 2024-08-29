@@ -10,7 +10,6 @@ from utils import (
 )
 from constants import (
     MEETING_CANCEL,
-    MEETING_EDIT,
     MEETING_READY,
     NOTIFY_ACCEPT,
     NOTIFY_LATE,
@@ -61,11 +60,6 @@ class Listener:
         elif query.data == MEETING_CANCEL:
             self.meeting.reset()
             await query.edit_message_text("Встреча отменена")
-        elif query.data == MEETING_EDIT:
-            # TODO
-            await query.edit_message_text(
-                "Встреча отредактирована",
-            )
 
     async def registration_buttons_listener(self, query: CallbackQuery) -> None:
         if query.data == SUCCESS_REGISTRATION:

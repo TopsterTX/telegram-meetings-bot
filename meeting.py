@@ -68,3 +68,4 @@ class Meeting:
     async def notify_participants(self, app: Application):
         for participant in self.participants:
             await self.notify(app, participant["chat_id"], participant["username"])
+        self.reset()

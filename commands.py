@@ -4,14 +4,11 @@ from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     ReplyKeyboardRemove,
-    ReplyKeyboardMarkup,
 )
 
 from constants import (
-    MEETING_EDIT,
     MEETING_CANCEL,
     MEETING_READY,
-    SELECT_APPROVE,
 )
 from meeting import Meeting
 from participants import Participants
@@ -25,8 +22,7 @@ class Commands:
         self.app = app
         self.meeting = meeting
         self.participants_state = participants_state
-        self.participants = participants_state.participants
-        self.THEME, self.DATE, self.PARTICIPANTS, self.APPLY = range(0, 4)
+        self.THEME, self.DATE, self.PARTICIPANTS = range(0, 3)
 
     async def create_meeting(
         self, update: Update, _context: ContextTypes.DEFAULT_TYPE
@@ -59,7 +55,7 @@ class Commands:
         self.meeting.set_date(date)
 
         keyboard = generate_participants_keyboard(
-            admin=self.meeting.admin, participants=self.participants
+            admin=self.meeting.admin, participants=self.participants_state.participants
         )
         reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -84,7 +80,6 @@ class Commands:
             [
                 InlineKeyboardButton("Готово", callback_data=MEETING_READY),
                 InlineKeyboardButton("Отмена", callback_data=MEETING_CANCEL),
-                InlineKeyboardButton("Редактировать", callback_data=MEETING_EDIT),
             ],
         )
 
@@ -92,8 +87,6 @@ class Commands:
         await update.callback_query.edit_message_text(
             meeting_string, reply_markup=reply_markup, parse_mode="HTML"
         )
-
-        return self.APPLY
 
     async def cancel(self, update: Update, _context: ContextTypes.DEFAULT_TYPE) -> int:
         await update.message.reply_text(
@@ -107,7 +100,13 @@ class Commands:
         self, _update: Update, _context: ContextTypes.DEFAULT_TYPE
     ) -> int:
         self.participants_state.reset()
+        return ConversationHandler.END
+
+    async def meeting_cancel(
+        self, _update: Update, _context: ContextTypes.DEFAULT_TYPE
+    ) -> int:
         self.participants_state.reset()
+        self.meeting.reset()
         return ConversationHandler.END
 
     async def start(self, update: Update, _context: ContextTypes.DEFAULT_TYPE) -> None:

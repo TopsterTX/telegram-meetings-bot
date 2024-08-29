@@ -9,7 +9,12 @@ from telegram.ext import (
     filters,
 )
 
-from constants import SELECT_APPROVE, SELECT_PARTICIPANTS_PREFIX, MEETING_READY
+from constants import (
+    SELECT_APPROVE,
+    SELECT_PARTICIPANTS_PREFIX,
+    MEETING_READY,
+    MEETING_CANCEL,
+)
 from meeting import Meeting
 from commands import Commands
 from listener import Listener
@@ -60,7 +65,11 @@ def main() -> None:
             },
             fallbacks=[
                 CallbackQueryHandler(
-                    commands.meeting_done, pattern=f"^{MEETING_READY}$"
+                    commands.meeting_done,
+                    pattern=f"^{MEETING_READY}$",
+                ),
+                CallbackQueryHandler(
+                    commands.meeting_cancel, pattern=f"^{MEETING_CANCEL}$"
                 ),
                 CommandHandler("cancel", commands.cancel),
             ],
