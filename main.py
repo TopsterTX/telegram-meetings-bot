@@ -11,22 +11,30 @@ from telegram.ext import (
 
 from constants import (
     SELECT_APPROVE,
-    SELECT_PARTICIPANTS_PREFIX,
     MEETING_READY,
     MEETING_CANCEL,
+    START,
+    LIST_FRIENDS,
+    CREATE_MEETING,
+    SELECT_PARTICIPANTS_PREFIX,
+    UNSELECT_PARTICIPANTS_PREFIX,
+    NOTIFY_PREFIX,
+    SUCCESS_REGISTRATION,
+    REJECT_REGISTRATION,
 )
+from config import BOT_TOKEN, DB_NAME, DB_HOST, DB_PASS, DB_PORT, DB_USER
 from meeting import Meeting
+from user import User
 from commands import Commands
-from listener import Listener
-from participants import Participants
-from config import BOT_TOKEN
+from db import Db
 
 
 def main() -> None:
 
     command_info = [
-        ("start", "Знакомство с ботом, подтверждение регистрации"),
-        ("create_meeting", "Создание встречи"),
+        (START, "Знакомство с ботом, подтверждение регистрации"),
+        (LIST_FRIENDS, "Список зарегистрированных пользователей"),
+        (CREATE_MEETING, "Создание встречи"),
     ]
 
     async def post_init(application: Application) -> None:
@@ -34,17 +42,11 @@ def main() -> None:
 
     app = ApplicationBuilder().token(BOT_TOKEN).post_init(post_init).build()
 
-    participants_state = Participants()
-    meeting = Meeting()
-    commands = Commands(meeting, participants_state, app)
-    listener = Listener(meeting, participants_state, app)
-    participants_state.subscribe(
-        lambda data: (
-            meeting.add_participant(data)
-            if data["status"] == SELECT_PARTICIPANTS_PREFIX
-            else meeting.remove_participant(data)
-        )
-    )
+    db = Db(dbname=DB_NAME, host=DB_HOST, port=DB_PORT, user=DB_USER, password=DB_PASS)
+
+    user = User(db)
+    meeting = Meeting(db)
+    commands = Commands(app, db, user, meeting)
 
     command_handlers = [
         ConversationHandler(
@@ -64,18 +66,31 @@ def main() -> None:
                 ],
             },
             fallbacks=[
-                CallbackQueryHandler(
-                    commands.meeting_done,
-                    pattern=f"^{MEETING_READY}$",
-                ),
-                CallbackQueryHandler(
-                    commands.meeting_cancel, pattern=f"^{MEETING_CANCEL}$"
-                ),
+                CallbackQueryHandler(commands.button_listener),
+                # CallbackQueryHandler(
+                #     commands.select_participants,
+                #     pattern=f"^{SELECT_PARTICIPANTS_PREFIX}|^{UNSELECT_PARTICIPANTS_PREFIX}",
+                # ),
+                # CallbackQueryHandler(
+                #     commands.meeting_done,
+                #     pattern=f"^{MEETING_READY}$",
+                # ),
+                # CallbackQueryHandler(
+                #     commands.registration_buttons_listener,
+                #     pattern=f"r'(^{SUCCESS_REGISTRATION}|^{REJECT_REGISTRATION})$",
+                # ),
+                # CallbackQueryHandler(commands.cancel, pattern=f"^{MEETING_CANCEL}$"),
+                # CallbackQueryHandler(commands.default_button_listener),
                 CommandHandler("cancel", commands.cancel),
             ],
         ),
         CommandHandler("start", commands.start),
-        CallbackQueryHandler(listener.button_listener),
+        CommandHandler("list_friends", commands.list_friends),
+        CallbackQueryHandler(
+            commands.registration_buttons_listener,
+            pattern=f"(^{SUCCESS_REGISTRATION}|^{REJECT_REGISTRATION})$",
+        ),
+        CallbackQueryHandler(commands.answer_users, pattern=f"^{NOTIFY_PREFIX}"),
     ]
 
     app.add_handlers(command_handlers)
