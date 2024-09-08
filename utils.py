@@ -1,76 +1,60 @@
 from telegram import InlineKeyboardButton
-from math import floor, ceil
 
-from constants import SELECT_PARTICIPANTS_PREFIX, PARTICIPANT_OFFSET, SELECT_APPROVE
-
-
-def generate_participants():
-    file = open("./list.txt", "r")
-    content = file.read()
-    participants = content.split("\n")
-    participants_len = len(participants)
-
-    result = []
-
-    if participants_len:
-        for participant in participants:
-            if participant != "":
-                username, chat_id = participant.split(" ")
-                result.append((username, chat_id))
-
-    file.close()
-    return result
+from constants import (
+    SELECT_PARTICIPANTS_PREFIX,
+    SELECT_APPROVE,
+    UNSELECT_PARTICIPANTS_PREFIX,
+)
+from meeting import Meeting
+from user import User
 
 
-def sort(participants):
-    is_sorted = len(participants) > PARTICIPANT_OFFSET
-
-    arr = (
-        [[] for _ in range(ceil(len(participants) / PARTICIPANT_OFFSET))]
-        if is_sorted
-        else [[]]
+def generate_participants_keyboard(meeting: Meeting, user: User, current_meeting_id):
+    (_id, _theme, _status, admin_user_id, *_rest) = meeting.get_meeting_by_id(
+        current_meeting_id
+    )
+    selected_users_id = meeting.get_meeting_participants(
+        current_meeting_id, ("user_id",)
     )
 
-    for ind, user in enumerate(participants):
-        arr[floor(ind / PARTICIPANT_OFFSET) if is_sorted else 0].append(user)
+    participants = user.get_users((("id", "!=", admin_user_id),))
 
-    return arr
-
-
-def generate_participants_keyboard(admin: str, participants):
     keyboard = []
 
-    for ind, username in enumerate(participants):
-        if username != admin:
-            is_selected = participants[username]["status"] == SELECT_PARTICIPANTS_PREFIX
-            button_title = f"{username} 👍" if is_selected else username
-            keyboard.append(
-                [
-                    InlineKeyboardButton(
-                        button_title,
-                        callback_data=f"{participants[username]['status']} {username}",
-                    )
-                ]
-            )
+    for ind, participant in enumerate(participants):
+        user_id, username, _chat_id, first_name = participant
+
+        is_selected = (user_id,) in selected_users_id
+        button_title = (
+            f"{username} {first_name} 👍" if is_selected else f"{username} {first_name}"
+        )
+        callback_data_prefix = (
+            UNSELECT_PARTICIPANTS_PREFIX if is_selected else SELECT_PARTICIPANTS_PREFIX
+        )
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    button_title,
+                    callback_data=f"{callback_data_prefix} {username}",
+                )
+            ]
+        )
 
     keyboard.append([InlineKeyboardButton("Готово", callback_data=SELECT_APPROVE)])
 
     return keyboard
 
 
-def add_participant(username: str, chat_id: int):
-    file = open("./list.txt", "a")
-    file.write(f"{username} {chat_id}" + "\n")
-    file.close()
-
-
-def generate_meeting_string(admin_username: str, theme: str, date: str, participants):
+def generate_meeting_string(
+    theme: str, date: str, participants, admin_username: str = None
+):
     participants_string = ""
-    for ind, participant in enumerate(participants):
-        participants_string += (
-            ", " if ind != 0 else ""
-        ) + f"@{participant['username']}"
+    for ind, participant_data in enumerate(participants):
+        (username, *_rest) = participant_data
+        participants_string += (", " if ind != 0 else "") + f"@{username}"
 
-    text = f"Создатель встречи: @{admin_username}\n\n<b>{theme}</b>\nДата: {date}\nУчастники: {participants_string}"
+    admin_title = f"Создатель встречи: @{admin_username}" if admin_username else ""
+
+    text = f"{admin_title}\n\n<b>{theme}</b>\nДата: {date}\nУчастники: {participants_string}"
 
     return text
