@@ -165,7 +165,7 @@ class Db:
             self.cur.execute(query)
             self.conn.commit()
             if returning:
-                return self.cur.fetchone()[0]
+                return self.cur.fetchone()
         except Exception:
             self.conn.commit()
             raise Exception(DEFAULT_ERROR)

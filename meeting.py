@@ -16,12 +16,12 @@ class Meeting:
     def get_meeting_by_admin_id(self, admin_id):
         return self._db.select("meetings", "*", (("admin_user_id", "=", admin_id),))[0]
 
-    def get_meeting_participants(self, meeting_id, keys: tuple):
+    def get_meeting_participants(self, meeting_id, keys: tuple = "*"):
         return self._db.custom_query(
             sql.SQL(
                 "SELECT {keys} FROM users JOIN user_meeting AS um ON um.meeting_id={meeting_id} WHERE um.user_id=users.id"
             ).format(
-                keys=sql.SQL(", ").join(map(sql.Identifier, keys)),
+                keys=sql.SQL(", ").join(map(sql.SQL, keys)),
                 meeting_id=sql.Literal(meeting_id),
             )
         )

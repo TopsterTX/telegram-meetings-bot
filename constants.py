@@ -10,6 +10,9 @@ SELECT_PARTICIPANTS_PREFIX = "select"
 SELECT_APPROVE = f"approve_{SELECT_PARTICIPANTS_PREFIX}"
 UNSELECT_PARTICIPANTS_PREFIX = "unselect"
 
+# Texts
+
+CANCEL_MEETING_TEXT = "Создание встречи отменено."
 # Commands
 CREATE_MEETING = "create_meeting"
 START = "start"
@@ -28,3 +31,6 @@ MEETING_STATUSES = [CREATING, EDITING, CANCEL, REJECT, PROCESSING, EXPIRED]
 # DB constants
 DEFAULT_ERROR = "default_error"
 RECORD_ALREADY_EXIST = "record_already_exist"
+
+# Event
+CHECK_MEETING_PARTICIPANTS = "check_meeting_participants"

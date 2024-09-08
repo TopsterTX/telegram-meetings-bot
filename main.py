@@ -11,18 +11,16 @@ from telegram.ext import (
 
 from constants import (
     SELECT_APPROVE,
-    MEETING_READY,
-    MEETING_CANCEL,
     START,
     LIST_FRIENDS,
     CREATE_MEETING,
-    SELECT_PARTICIPANTS_PREFIX,
-    UNSELECT_PARTICIPANTS_PREFIX,
     NOTIFY_PREFIX,
     SUCCESS_REGISTRATION,
     REJECT_REGISTRATION,
 )
 from config import BOT_TOKEN, DB_NAME, DB_HOST, DB_PASS, DB_PORT, DB_USER
+from event_emmiter import EventEmitter
+from handlers import register_event_emitter_handlers
 from meeting import Meeting
 from user import User
 from commands import Commands
@@ -41,12 +39,15 @@ def main() -> None:
         await application.bot.set_my_commands(commands=command_info)
 
     app = ApplicationBuilder().token(BOT_TOKEN).post_init(post_init).build()
-
+    event_emitter = EventEmitter()
     db = Db(dbname=DB_NAME, host=DB_HOST, port=DB_PORT, user=DB_USER, password=DB_PASS)
 
     user = User(db)
     meeting = Meeting(db)
-    commands = Commands(app, db, user, meeting)
+    commands = Commands(app, db, user, meeting, event_emitter)
+
+    # Register handlers
+    register_event_emitter_handlers(event_emitter)
 
     command_handlers = [
         ConversationHandler(
@@ -67,20 +68,6 @@ def main() -> None:
             },
             fallbacks=[
                 CallbackQueryHandler(commands.button_listener),
-                # CallbackQueryHandler(
-                #     commands.select_participants,
-                #     pattern=f"^{SELECT_PARTICIPANTS_PREFIX}|^{UNSELECT_PARTICIPANTS_PREFIX}",
-                # ),
-                # CallbackQueryHandler(
-                #     commands.meeting_done,
-                #     pattern=f"^{MEETING_READY}$",
-                # ),
-                # CallbackQueryHandler(
-                #     commands.registration_buttons_listener,
-                #     pattern=f"r'(^{SUCCESS_REGISTRATION}|^{REJECT_REGISTRATION})$",
-                # ),
-                # CallbackQueryHandler(commands.cancel, pattern=f"^{MEETING_CANCEL}$"),
-                # CallbackQueryHandler(commands.default_button_listener),
                 CommandHandler("cancel", commands.cancel),
             ],
         ),

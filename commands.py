@@ -25,7 +25,10 @@ from constants import (
     RECORD_ALREADY_EXIST,
     DEFAULT_ERROR,
     CREATE_MEETING,
+    CANCEL_MEETING_TEXT,
+    CHECK_MEETING_PARTICIPANTS,
 )
+from event_emmiter import EventEmitter
 from user import User
 from meeting import Meeting
 from db import Db
@@ -36,12 +39,20 @@ from utils import (
 
 
 class Commands:
-    def __init__(self, app: Application, db: Db, user: User, meeting: Meeting):
+    def __init__(
+        self,
+        app: Application,
+        db: Db,
+        user: User,
+        meeting: Meeting,
+        event_emitter: EventEmitter,
+    ):
         self.current_meeting_id = ""
         self.db = db
         self.app = app
         self.user = user
         self.meeting = meeting
+        self.event_emitter = event_emitter
         self.THEME, self.DATE, self.PARTICIPANTS = range(0, 3)
 
     async def list_friends(self, update: Update, _context: ContextTypes.DEFAULT_TYPE):
@@ -154,10 +165,9 @@ class Commands:
 
     async def button_listener(
         self, update: Update, _context: ContextTypes.DEFAULT_TYPE
-    ) -> None:
+    ) -> int or None:
 
-        print("\n\nsp\n\n")
-        print({"_context": _context})
+        message = update.message
         query = update.callback_query
 
         await query.answer()
@@ -170,14 +180,20 @@ class Commands:
         if query.data == MEETING_READY:
             await self.meeting_done(query)
 
+            return ConversationHandler.END
+
         if query.data == MEETING_CANCEL:
-            await self.cancel(update, _context)
+            self.meeting.set_status(self.current_meeting_id, CANCEL_COMMAND)
+            self.current_meeting_id = None
+            await query.edit_message_text(CANCEL_MEETING_TEXT)
+
+            return ConversationHandler.END
 
     async def cancel(self, update: Update, _context: ContextTypes.DEFAULT_TYPE) -> int:
         self.meeting.set_status(self.current_meeting_id, CANCEL_COMMAND)
         self.current_meeting_id = None
         await update.message.reply_text(
-            "Создание встречи отменено.",
+            CANCEL_MEETING_TEXT,
             reply_markup=ReplyKeyboardRemove(),
         )
 
@@ -230,44 +246,51 @@ class Commands:
                 parse_mode="HTML",
             )
 
-            await query.edit_message_text(text="Встреча создана")
+        await query.edit_message_text(text="Встреча создана")
 
-        print("end")
         return ConversationHandler.END
 
     async def answer_users(
         self, update: Update, _context: ContextTypes.DEFAULT_TYPE
     ) -> None:
-        print("\n\nau\n\n")
         query = update.callback_query
 
         await query.answer()
 
         _, username, status = query.data.split(" ")
         (user_id, *_rest) = self.user.get_user_by_username(username)
-        # (_id, theme, _status, admin_user_id, *_rest) = (
-        #     self.meeting.get_meeting_by_id(meeting_id)
-        # )
-        # (_id, _username, admin_chat_id, *_rest) = self.user.get_user_by_id(
-        #     admin_user_id
-        # )
+        (_id, theme, _status, admin_user_id, *_rest) = self.meeting.get_meeting_by_id(
+            self.current_meeting_id
+        )
+        (_id, _username, admin_chat_id, *_rest) = self.user.get_user_by_id(
+            admin_user_id
+        )
 
         if status == NOTIFY_ACCEPT:
             await self.app.bot.send_message(
-                chat_id="652135026",
-                text=f"@{username} согласен",
+                chat_id=admin_chat_id,
+                text=f"@{username} принял встречу:\n<b>{theme}</b>",
+                parse_mode=ParseMode.HTML,
             )
 
         if status == NOTIFY_LATE:
             await self.app.bot.send_message(
-                chat_id="652135026",
-                text=f"@{username} опоздает",
+                chat_id=admin_chat_id,
+                text=f"@{username} опоздает на встречу:\n<b>{theme}</b>",
+                parse_mode=ParseMode.HTML,
             )
 
         if status == NOTIFY_REJECT:
-            # self.meeting.remove_participant_to_meeting(meeting_id, user_id)
+            self.meeting.remove_participant_to_meeting(self.current_meeting_id, user_id)
+            self.event_emitter.emit(
+                CHECK_MEETING_PARTICIPANTS,
+                self.meeting,
+                self.current_meeting_id,
+            )
             await self.app.bot.send_message(
-                chat_id="652135026", text=f"@{username} отказался"
+                chat_id=admin_chat_id,
+                text=f"@{username} отказался от встречи:\n<b>{theme}</b>",
+                parse_mode=ParseMode.HTML,
             )
 
         await query.edit_message_text("Отлично, уведомил администратора")
@@ -301,13 +324,6 @@ class Commands:
 
         if query.data == REJECT_REGISTRATION:
             await query.edit_message_text("Нет, ну так не пойдёт")
-
-    async def default_button_listener(
-        self, update: Update, _context: ContextTypes.DEFAULT_TYPE
-    ) -> None:
-        print("\n\ndefault\n\n")
-        print(_context)
-        pass
 
     async def start(self, update: Update, _context: ContextTypes.DEFAULT_TYPE) -> None:
         keyboard = (

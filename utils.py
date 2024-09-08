@@ -17,8 +17,7 @@ def generate_participants_keyboard(meeting: Meeting, user: User, current_meeting
         current_meeting_id, ("user_id",)
     )
 
-    # (("id", "!=", admin_user_id),)
-    participants = user.get_users()
+    participants = user.get_users((("id", "!=", admin_user_id),))
 
     keyboard = []
 
@@ -44,12 +43,6 @@ def generate_participants_keyboard(meeting: Meeting, user: User, current_meeting
     keyboard.append([InlineKeyboardButton("Готово", callback_data=SELECT_APPROVE)])
 
     return keyboard
-
-
-def add_participant(username: str, chat_id: int):
-    file = open("./list.txt", "a")
-    file.write(f"{username} {chat_id}" + "\n")
-    file.close()
 
 
 def generate_meeting_string(
