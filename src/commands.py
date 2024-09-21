@@ -338,18 +338,27 @@ class Commands:
             await query.edit_message_text("Нет, ну так не пойдёт")
 
     async def start(self, update: Update, _context: ContextTypes.DEFAULT_TYPE) -> None:
-        keyboard = (
-            [
-                InlineKeyboardButton(
-                    "Зарегистрируй меня", callback_data=SUCCESS_REGISTRATION
-                ),
-                InlineKeyboardButton("Отказываюсь", callback_data=REJECT_REGISTRATION),
-            ],
-        )
+        user_from_db = self.user.get_user_by_chat_id(update.message.chat.id)
+        if not user_from_db:
+            keyboard = (
+                [
+                    InlineKeyboardButton(
+                        "Зарегистрируй меня", callback_data=SUCCESS_REGISTRATION
+                    ),
+                    InlineKeyboardButton(
+                        "Отказываюсь", callback_data=REJECT_REGISTRATION
+                    ),
+                ],
+            )
 
-        reply_markup = InlineKeyboardMarkup(keyboard)
+            reply_markup = InlineKeyboardMarkup(keyboard)
 
-        await update.message.reply_text(
-            "Привет! Я бот для встреч. Для создания встреч необходимо зарегистрироваться.",
-            reply_markup=reply_markup,
-        )
+            await update.message.reply_text(
+                "Привет! Я бот для организации встреч. Для создания встречи необходимо зарегистрироваться.",
+                reply_markup=reply_markup,
+            )
+        else:
+            await update.message.reply_text(
+                f"Привет! Я бот для организации встреч. Ты уже зарегистирован.\nДля создания встречи можешь использовать команду /{CREATE_MEETING}",
+                reply_markup=ReplyKeyboardRemove(),
+            )
