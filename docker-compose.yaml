@@ -1,0 +1,48 @@
+name: telegram_meetings_bot
+services:
+  db:
+    container_name: db
+    image: postgres
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    ports:
+      - 5433:5432
+    volumes:
+      - ./db/data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - custom
+    env_file: .env
+    restart: always
+
+  bot:
+    container_name: bot
+    build: ./
+    depends_on:
+      db:
+        condition: service_healthy
+    command: bash -c "python src/main.py"
+    volumes:
+      - ./src:/app/src
+    networks:
+      - custom
+    environment:
+      DB_NAME: ${DB_NAME}
+      DB_PORT: 5432
+      DB_HOST: db
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      BOT_TOKEN: ${BOT_TOKEN}
+    restart: always
+
+networks:
+  custom:
+    driver: bridge

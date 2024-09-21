@@ -55,7 +55,7 @@ class Commands:
         self.event_emitter = event_emitter
         self.THEME, self.DATE, self.PARTICIPANTS = range(0, 3)
 
-    async def list_friends(self, update: Update, _context: ContextTypes.DEFAULT_TYPE):
+    async def list_users(self, update: Update, _context: ContextTypes.DEFAULT_TYPE):
         participants_data = self.user.get_users()
         participants_text = ""
 
@@ -63,11 +63,19 @@ class Commands:
             _id, username, _chat_id, first_name = user
             participants_text += f"@<b>{username}</b>: {first_name}\n"
 
-        await update.message.reply_text(participants_text, parse_mode=ParseMode.HTML)
+        if participants_text:
+            await update.message.reply_text(
+                participants_text, parse_mode=ParseMode.HTML
+            )
+        else:
+            await update.message.reply_text(
+                f"Список пуст.\nЗарегистрируйтесь, использую команду /{START}"
+            )
 
     async def create_meeting(
         self, update: Update, _context: ContextTypes.DEFAULT_TYPE
     ) -> None:
+        users_from_db = self.user.get_users()
         user_from_db = self.user.get_user_by_chat_id(update.message.chat.id)
 
         if not user_from_db:
@@ -75,6 +83,10 @@ class Commands:
                 f"Вам необходимо зарегистрироваться !\nВыполните команду /{START}"
             )
             return ConversationHandler.END
+        elif len(users_from_db) <= 1:
+            await update.message.reply_text(
+                f"Список зарегистированных пользователей пуст.\nВы не сможете добавить участников встречи."
+            )
         else:
             (id, username, *_rest) = user_from_db
             self.current_meeting_id = self.meeting.create_meeting()

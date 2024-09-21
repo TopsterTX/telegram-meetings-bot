@@ -12,13 +12,13 @@ from telegram.ext import (
 from constants import (
     SELECT_APPROVE,
     START,
-    LIST_FRIENDS,
+    LIST_USERS,
     CREATE_MEETING,
     NOTIFY_PREFIX,
     SUCCESS_REGISTRATION,
     REJECT_REGISTRATION,
 )
-from config import BOT_TOKEN, DB_NAME, DB_HOST, DB_PASS, DB_PORT, DB_USER
+from config import BOT_TOKEN
 from event_emmiter import EventEmitter
 from handlers import register_event_emitter_handlers
 from meeting import Meeting
@@ -30,8 +30,8 @@ from db import Db
 def main() -> None:
 
     command_info = [
-        (START, "Знакомство с ботом, подтверждение регистрации"),
-        (LIST_FRIENDS, "Список зарегистрированных пользователей"),
+        (START, "Регистрация"),
+        (LIST_USERS, "Список зарегистрированных пользователей"),
         (CREATE_MEETING, "Создание встречи"),
     ]
 
@@ -40,7 +40,7 @@ def main() -> None:
 
     app = ApplicationBuilder().token(BOT_TOKEN).post_init(post_init).build()
     event_emitter = EventEmitter()
-    db = Db(dbname=DB_NAME, host=DB_HOST, port=DB_PORT, user=DB_USER, password=DB_PASS)
+    db = Db()
 
     user = User(db)
     meeting = Meeting(db)
@@ -72,7 +72,7 @@ def main() -> None:
             ],
         ),
         CommandHandler("start", commands.start),
-        CommandHandler("list_friends", commands.list_friends),
+        CommandHandler("list_users", commands.list_users),
         CallbackQueryHandler(
             commands.registration_buttons_listener,
             pattern=f"(^{SUCCESS_REGISTRATION}|^{REJECT_REGISTRATION})$",
