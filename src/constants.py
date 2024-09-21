@@ -16,7 +16,7 @@ CANCEL_MEETING_TEXT = "Создание встречи отменено."
 # Commands
 CREATE_MEETING = "create_meeting"
 START = "start"
-LIST_FRIENDS = "list_friends"
+LIST_USERS = "list_users"
 CANCEL_COMMAND = "cancel"
 
 # Meeting statuses

@@ -1,6 +1,7 @@
 import psycopg
 from psycopg import sql
 
+from config import DB_NAME, DB_HOST, DB_PASS, DB_PORT, DB_USER
 from constants import (
     DEFAULT_ERROR,
     RECORD_ALREADY_EXIST,
@@ -8,12 +9,12 @@ from constants import (
 
 
 class Db:
-    def __init__(self, dbname: str, user: str, password: str, host: str, port: str):
-        self.dbname = dbname
-        self.user = user
-        self.password = password
-        self.host = host
-        self.port = port
+    def __init__(self):
+        self.dbname = DB_NAME
+        self.user = DB_USER
+        self.password = DB_PASS
+        self.host = DB_HOST
+        self.port = DB_PORT
 
         self.conn = psycopg.connect(
             f"dbname={self.dbname} user={self.user} host={self.host} password={self.password} port={self.port}"
