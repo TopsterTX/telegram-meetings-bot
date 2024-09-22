@@ -217,15 +217,13 @@ class Commands:
         (_id, theme, status, admin_user_id, date) = self.meeting.get_meeting_by_id(
             self.current_meeting_id
         )
-        # (_id, admin_username, *_rest) = self.user.get_user_by_id(admin_user_id)
+        (_id, admin_username, *_rest) = self.user.get_user_by_id(admin_user_id)
         selected_participants = self.meeting.get_meeting_participants(
             self.current_meeting_id,
             ("username", "chat_id"),
         )
         meeting_string = generate_meeting_string(
-            theme,
-            date,
-            selected_participants,
+            theme, date, selected_participants, admin_username
         )
 
         for participant in selected_participants:
